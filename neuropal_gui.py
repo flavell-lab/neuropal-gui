@@ -28,6 +28,7 @@ import csv
 import itertools
 import os
 import sys
+import time
 import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox, ttk
 
@@ -627,14 +628,20 @@ SCROLL_COL_WIDTH = 26        # px reserved to the right of the views for the scr
 SCROLL_PAGE = 10             # slices per page-jump, when the trough is clicked
 REPEAT_DELAY_MS = 300        # hold an arrow this long before it starts repeating
 REPEAT_INTERVAL_MS = 120     # and then step this often, matched to what a redraw costs
+TOUCHPAD_UNITS_PER_SLICE = 10  # trackpad delta banked per slice, so a swipe is not a blur
+# Tk 9 reports one detent as a flat +/-120 however fast the wheel is turned, where Tk 8.6
+# on macOS passed the OS's accelerated count through (1 slice when eased, 13 when flicked).
+# A single detent still steps one slice; only a fast run of them is scaled up.
+WHEEL_ACCEL_MS = 100         # events closer together than this count as one flick
+WHEEL_ACCEL_MAX = 6          # most slices a single accelerated detent may step
 
 
 def wheel_delta(event):
-    """One wheel or trackpad event -> slices to step, sign included.
+    """One wheel event -> slices to step, sign included.
 
     Tk reports the wheel three different ways: Button-4/5 on X11, +/-120 steps on Windows,
-    and small signed counts on macOS, where a two-finger swipe arrives as a stream of them.
-    Scrolling up steps to the earlier slice, the direction the thumb moves.
+    and small signed counts on macOS. Scrolling up steps to the earlier slice, the
+    direction the thumb moves.
     """
     if getattr(event, "num", None) in (4, 5):
         return -1 if event.num == 4 else 1
@@ -646,16 +653,66 @@ def wheel_delta(event):
     return int(-delta) if abs(delta) >= 1 else (-1 if delta > 0 else 1)
 
 
+def wheel_accel(dt_ms):
+    """Slices per detent, given the gap since the previous wheel event.
+
+    Only for wheels that report in fixed +/-120 steps, which carry no speed of their own.
+    Eased scrolling (>= WHEEL_ACCEL_MS apart) stays at one slice per detent, so a single
+    click still lands on the neighbouring slice.
+    """
+    if dt_ms >= WHEEL_ACCEL_MS:
+        return 1
+    return min(max(int(WHEEL_ACCEL_MS / max(dt_ms, 8.0)), 1), WHEEL_ACCEL_MAX)
+
+
 def bind_wheel(widget, handler):
-    """Route wheel and trackpad scrolling on `widget` to `handler(steps)`."""
+    """Route wheel and trackpad scrolling on `widget` to `handler(steps)`.
+
+    Tk 9 routes a trackpad's precise scrolling to its own <TouchpadScroll> event, so on
+    macOS a two-finger swipe never reaches <MouseWheel> there, though a wheel mouse still
+    does. Tk 8.6 has no such event and sends both through <MouseWheel>; binding it is
+    therefore attempted and allowed to fail.
+    """
+    last = [0.0]        # when the previous wheel event arrived, for the acceleration
+
     def on_wheel(event):
         steps = wheel_delta(event)
-        if steps:
-            handler(steps)
+        if not steps:
+            return "break"
+        now = time.monotonic() * 1000.0
+        # Quantised wheels only: a raw macOS delta is already accelerated by the OS.
+        if abs(getattr(event, "delta", 0)) >= 120:
+            steps *= wheel_accel(now - last[0])
+        last[0] = now
+        handler(steps)
         return "break"
+
     widget.bind("<MouseWheel>", on_wheel)      # macOS and Windows
     widget.bind("<Button-4>", on_wheel)        # X11
     widget.bind("<Button-5>", on_wheel)
+
+    # A swipe arrives as a stream of small deltas, far more than there are slices to show,
+    # so they are banked and spent a slice at a time.
+    carry = [0.0]
+
+    def on_touchpad(event):
+        # %D packs both axes into one integer; Tk's own helper unpacks it.
+        try:
+            _, dy = (int(v) for v in widget.tk.splitlist(
+                widget.tk.call("::tk::PreciseScrollDeltas", event.delta)))
+        except (tk.TclError, ValueError):
+            return "break"
+        carry[0] -= dy                          # same sign convention as the wheel
+        steps = int(carry[0] / TOUCHPAD_UNITS_PER_SLICE)
+        if steps:
+            carry[0] -= steps * TOUCHPAD_UNITS_PER_SLICE
+            handler(steps)
+        return "break"
+
+    try:
+        widget.bind("<TouchpadScroll>", on_touchpad)
+    except tk.TclError:
+        pass                                    # Tk 8.6: handled by <MouseWheel> above
 
 
 class SliceScroller:
