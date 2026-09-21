@@ -6,9 +6,34 @@ the same loaded volume and show a lateral and a coronal panel with a linked cros
 
 Built on Tk + matplotlib; volumes are read and written with `pynrrd`.
 
+## Get the code
+
+Clone the repository and move into the folder that creates. This needs
+[git](https://git-scm.com/downloads), and a GitHub account with access to the repository,
+since it is private.
+
+```bash
+git clone https://github.com/hongyin-liu/neuropal-gui.git
+cd neuropal-gui
+```
+
+That prompts for your GitHub username and a
+[personal access token](https://github.com/settings/tokens) as the password. If you already
+have an SSH key registered with GitHub, this clones without a prompt instead:
+
+```bash
+git clone git@github.com:hongyin-liu/neuropal-gui.git
+cd neuropal-gui
+```
+
+Every command below is run from inside that `neuropal-gui` folder.
+
 ## Install and run
 
-With [uv](https://docs.astral.sh/uv/) (recommended — the Python it downloads includes Tk):
+With [uv](https://docs.astral.sh/uv/) (recommended — the Python it downloads includes Tk).
+If you do not have uv, install it with `curl -LsSf https://astral.sh/uv/install.sh | sh` on
+macOS or Linux, or see its [install page](https://docs.astral.sh/uv/getting-started/installation/)
+for Windows. Then:
 
 ```bash
 uv sync
