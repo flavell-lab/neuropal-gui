@@ -121,6 +121,21 @@ plus a fuller cursor readout:
 or type an ROI id or a neuron name and press Return: the crosshair jumps to that ROI's
 centroid in both panels, changing the z and y slices as needed.
 
+## Label table
+
+One row per ROI, written as UTF-8 CSV with these columns:
+
+`Neuron Class`, `Coordinates`, `ROI ID`, `Confidence`, `Second Candidate`,
+`Second Candidate Confidence`, `Notes`
+
+Named rows come first, sorted by ROI id, then any rows left unidentified. Recall keys are on `ROI ID` (used for displaying neuron names on roi), so `Coordinates` is written for user's reference only.
+
+## Notes
+
+- Runs on macOS, Linux and Windows.
+- For data that lives on a server, see [Working with data on a remote machine](#working-with-data-on-a-remote-machine).
+- Volumes are `(X, Y, Z, C)` for NeuroPAL and `(X, Y, Z)` for the companion files.
+
 ## Working with data on a remote machine
 
 The GUI needs a display, so run it on your own machine and leave the volumes on the server.
@@ -168,21 +183,6 @@ avoids all of the above.
 needs `xauth` installed and `X11Forwarding yes` in `sshd_config`, and every redraw ships a
 full bitmap, so dragging the crosshair and scrolling slices lag. A VNC session is better if
 the server has one. Both usually need an administrator; the mount above does not.
-
-## Label table
-
-One row per ROI, written as UTF-8 CSV with these columns:
-
-`Neuron Class`, `Coordinates`, `ROI ID`, `Confidence`, `Second Candidate`,
-`Second Candidate Confidence`, `Notes`
-
-Named rows come first, sorted by ROI id, then any rows left unidentified. Recall keys are on `ROI ID` (used for displaying neuron names on roi), so `Coordinates` is written for user's reference only.
-
-## Notes
-
-- Runs on macOS, Linux and Windows.
-- For data that lives on a server, see [Working with data on a remote machine](#working-with-data-on-a-remote-machine).
-- Volumes are `(X, Y, Z, C)` for NeuroPAL and `(X, Y, Z)` for the companion files.
 
 ## License
 
