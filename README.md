@@ -121,6 +121,54 @@ plus a fuller cursor readout:
 or type an ROI id or a neuron name and press Return: the crosshair jumps to that ROI's
 centroid in both panels, changing the z and y slices as needed.
 
+## Working with data on a remote machine
+
+The GUI needs a display, so run it on your own machine and leave the volumes on the server.
+Mounting the remote folder over SSHFS is the least friction: reads are fast enough that it
+does not feel remote (a 2.7 MB volume opens in well under a second), and saves write
+straight back.
+
+**macOS** — FUSE-T needs no kernel extension, unlike macFUSE:
+
+```bash
+brew install --cask fuse-t
+brew install --cask macos-fuse-t/cask/fuse-t-sshfs
+```
+
+**Linux** — `sudo apt install sshfs` (or `sudo dnf install fuse-sshfs`).
+
+Then mount, run, and unmount when you are done:
+
+```bash
+mkdir -p ~/mnt/server
+sshfs user@server:/home/user ~/mnt/server -o reconnect,volname=server,noappledouble
+uv run run_neuropal_gui_example.py      # with HOME pointing into ~/mnt/server
+umount ~/mnt/server
+```
+
+Point `HOME` in the launcher at the mounted dataset, e.g.
+`HOME = "/Users/you/mnt/server/data/2023-01-06-08"`.
+
+Worth knowing:
+
+- Keep the code and `.venv` on the local disk; only the data belongs on the mount.
+  `uv sync` over SSHFS writes thousands of small files and is slow.
+- The mount goes stale after sleep or a network change, and anything touching the path
+  then hangs until it times out. `umount` and mount again.
+- Do not sleep the machine or drop the connection during a save -- a partially written
+  `.nrrd` is unreadable. Interrupting a load is harmless.
+- On macOS, `sudo mdutil -i off ~/mnt/server` stops Spotlight indexing the mount over the
+  network, and `defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool
+  true` stops Finder writing `.DS_Store` files onto the server.
+
+Copying the dataset with `rsync` and working locally is the zero-install alternative, and
+avoids all of the above.
+
+**Running the GUI itself on the server** (X11 forwarding, `ssh -Y`) works, but the server
+needs `xauth` installed and `X11Forwarding yes` in `sshd_config`, and every redraw ships a
+full bitmap, so dragging the crosshair and scrolling slices lag. A VNC session is better if
+the server has one. Both usually need an administrator; the mount above does not.
+
 ## Label table
 
 One row per ROI, written as UTF-8 CSV with these columns:
@@ -133,8 +181,7 @@ Named rows come first, sorted by ROI id, then any rows left unidentified. Recall
 ## Notes
 
 - Runs on macOS, Linux and Windows.
-- Over SSH the GUI needs a display: `ssh -X` (X11 forwarding) works but is slow with large
-  volumes, so a remote desktop session (VNC/X2Go) or copying the data locally is smoother.
+- For data that lives on a server, see [Working with data on a remote machine](#working-with-data-on-a-remote-machine).
 - Volumes are `(X, Y, Z, C)` for NeuroPAL and `(X, Y, Z)` for the companion files.
 
 ## License
