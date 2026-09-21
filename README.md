@@ -138,46 +138,52 @@ Named rows come first, sorted by ROI id, then any rows left unidentified. Recall
 
 ## Working with data on a remote machine
 
-The GUI needs a display, so run it on your own machine and leave the volumes on the server.
-Mounting the remote folder over SSHFS is the least friction: reads are fast enough that it
-does not feel remote (a 2.7 MB volume opens in well under a second), and saves write
-straight back.
+The GUI needs a display, so it runs on your own machine. If the volumes live on a server,
+mount that folder over SSH and point a launcher at it -- reads are fast enough that it does
+not feel remote, and saves write straight back to the server.
 
-**macOS** — FUSE-T needs no kernel extension, unlike macFUSE:
+**Set up once.** On macOS (FUSE-T needs no kernel extension, unlike macFUSE):
 
 ```bash
 brew install --cask fuse-t
 brew install --cask macos-fuse-t/cask/fuse-t-sshfs
+mkdir -p ~/mnt/server
 ```
 
-**Linux** — `sudo apt install sshfs` (or `sudo dnf install fuse-sshfs`).
+On Linux, `sudo apt install sshfs` (or `sudo dnf install fuse-sshfs`) instead of the casks.
 
-Then mount, run, and unmount when you are done:
+**Then make a launcher for the remote data.** Copy `run_neuropal_gui_example.py` to, say,
+`run_neuropal_gui_remote.py`, and set `HOME` to where the dataset will appear under the
+mount:
+
+```python
+HOME = os.path.expanduser("~/mnt/server/path/to/2023-01-06-08")
+```
+
+**Every session, three commands** from the folder holding the launchers:
 
 ```bash
-mkdir -p ~/mnt/server
 sshfs user@server:/home/user ~/mnt/server -o reconnect,volname=server,noappledouble
-uv run run_neuropal_gui_example.py      # with HOME pointing into ~/mnt/server
+uv run run_neuropal_gui_remote.py
 umount ~/mnt/server
 ```
 
-Point `HOME` in the launcher at the mounted dataset, e.g.
-`HOME = "/Users/you/mnt/server/data/2023-01-06-08"`.
+Mount, run, unmount. Nothing to edit again unless you switch datasets.
 
 Worth knowing:
 
 - Keep the code and `.venv` on the local disk; only the data belongs on the mount.
   `uv sync` over SSHFS writes thousands of small files and is slow.
-- The mount goes stale after sleep or a network change, and anything touching the path
-  then hangs until it times out. `umount` and mount again.
+- The mount goes stale after sleep or a network change, and the launcher will then say the
+  folder is not there. `umount ~/mnt/server` and mount again.
 - Do not sleep the machine or drop the connection during a save -- a partially written
   `.nrrd` is unreadable. Interrupting a load is harmless.
 - On macOS, `sudo mdutil -i off ~/mnt/server` stops Spotlight indexing the mount over the
   network, and `defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool
   true` stops Finder writing `.DS_Store` files onto the server.
 
-Copying the dataset with `rsync` and working locally is the zero-install alternative, and
-avoids all of the above.
+Copying the dataset over with `rsync` and working locally is the zero-install alternative,
+and avoids all of the above.
 
 **Running the GUI itself on the server** (X11 forwarding, `ssh -Y`) works, but the server
 needs `xauth` installed and `X11Forwarding yes` in `sshd_config`, and every redraw ships a
