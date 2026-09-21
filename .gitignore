@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# uv
+.venv/
+uv.lock
+
+# GUI output
+corrected_nrrds_and_labels/
+
+# macOS
+.DS_Store

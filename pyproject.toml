@@ -1,0 +1,22 @@
+[project]
+name = "neuropal-gui"
+version = "1.0.0"
+description = "Two-tab viewer for NeuroPAL volumes: channel balance, and neuron labelling."
+requires-python = ">=3.10"
+
+# Everything the GUI imports that is not in the standard library. tkinter is stdlib, but it
+# needs a Tk-enabled interpreter; the pythons uv downloads include Tk, so `uv sync` produces
+# a working one without installing anything system-wide.
+dependencies = [
+    "matplotlib>=3.7",   # figures, the Tk canvas, path effects behind the label text
+    "numpy>=1.24",
+    "pynrrd>=1.0",       # reads and writes the .nrrd volumes (imported as `nrrd`)
+    "scipy>=1.10",       # PCHIP for the contrast curve, ndimage for ROI centroids
+]
+
+[tool.uv]
+# This is a folder of scripts, not a library: nothing to build or install.
+package = false
+# Prefer a python uv manages, which is guaranteed to have Tk. A system python without Tk
+# would import everything fine and then fail to open a window.
+python-preference = "managed"
