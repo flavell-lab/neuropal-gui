@@ -4,7 +4,7 @@ An interactive viewer for NeuroPAL volumes with two jobs: balance the colour cha
 multichannel `.nrrd`, and identify neurons ROI by ROI into a label table. Both tabs work on
 the same loaded volume and show a lateral and a coronal panel with a linked crosshair.
 
-3-minute tutorial video/demo: [Watch the video](https://youtu.be/dGFeFBPVXT4)
+3-minute tutorial video/demo: [demo-tutorial](https://youtu.be/dGFeFBPVXT4)
 
 Built on Tk + matplotlib; volumes are read and written with `pynrrd`.
 
