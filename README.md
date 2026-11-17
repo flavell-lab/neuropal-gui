@@ -6,23 +6,6 @@ the same loaded volume and show a lateral and a coronal panel with a linked cros
 
 Built on Tk + matplotlib; volumes are read and written with `pynrrd`.
 
-## Get the code
-
-Clone the repository and move into the folder that creates. 
-
-```bash
-git clone https://github.com/hongyin-liu/neuropal-gui.git
-cd neuropal-gui
-```
-
-That prompts for your GitHub username and a
-[personal access token](https://github.com/settings/tokens) as the password. If you already have an SSH key registered with GitHub, this clones without a prompt instead:
-
-```bash
-git clone git@github.com:hongyin-liu/neuropal-gui.git
-cd neuropal-gui
-```
-
 Every command below is run from inside that `neuropal-gui` folder.
 
 ## Install and run
