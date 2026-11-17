@@ -51,7 +51,7 @@ over y.
   shown in. Only rotations of the file's own orientation are offered; reflections would
   swap left and right. Aim for the ventral nerve cord at the bottom of the lateral view,
   which puts left-side neurons at the bottom of the coronal view.
-- **Channel brightness** — one slider and box per channel, as a percentage of a division
+- **Channel brightness** — This is essential to get the correct colors for each neuron, e.g. CEPD is pink, AVA is a bright blue color, etc. one slider and box per channel, as a percentage of a division
   factor (100% = untouched, 50% = divided by 2, 200% = multiplied by 2). The checkboxes
   turn a channel, or the whole NeuroPAL image, off in the display.
 - **Cursor** — voxel coordinates under the crosshair with the raw and corrected channel
