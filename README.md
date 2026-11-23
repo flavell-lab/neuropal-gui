@@ -13,7 +13,7 @@ Every command below is run from inside that `neuropal-gui` folder.
 ## Download, Install and Run
 Download the repository
 ```bash
-git clone https://github.com/hongyin-liu/neuropal-gui.git
+git clone https://github.com/flavell-lab/neuropal-gui.git
 cd neuropal-gui
 ```
 
