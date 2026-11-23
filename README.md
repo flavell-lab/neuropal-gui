@@ -10,7 +10,12 @@ Built on Tk + matplotlib; volumes are read and written with `pynrrd`.
 
 Every command below is run from inside that `neuropal-gui` folder.
 
-## Install and run
+## Download, Install and Run
+Download the repository
+```bash
+git clone https://github.com/hongyin-liu/neuropal-gui.git
+cd neuropal-gui
+```
 
 With [uv](https://docs.astral.sh/uv/) (recommended — the Python it downloads includes Tk).
 If you do not have uv, install it with `curl -LsSf https://astral.sh/uv/install.sh | sh` on
