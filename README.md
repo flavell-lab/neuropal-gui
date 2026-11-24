@@ -44,7 +44,7 @@ Two passes over a dataset:
 
 1. **Processing** — set the display orientation and the per-channel brightness, then save.
    The orientation and the brightness are baked into the written volumes.
-2. **Labeling** — reopen the corrected volumes and name neurons. Positions are recorded in the loaded file's own coordinates.
+2. **Labeling** — reopen the corrected volumes and name neurons, view and label neurons into a csv file, locate the neurons with a dropdown menu. Positions are recorded in the loaded file's own coordinates.
 
 ## Processing tab
 
@@ -56,8 +56,8 @@ over y.
 
 - **Display orientation** — pick the anatomical code (LPS, RAS, …) the volume should be
   shown in. Only rotations of the file's own orientation are offered; reflections would
-  swap left and right. Aim for the ventral nerve cord at the bottom of the lateral view,
-  which puts left-side neurons at the bottom of the coronal view.
+  swap left and right. Aim for the head at the left of the screen and ventral nerve cord at the bottom of the screen in the lateral view,
+  which puts right-side neurons at the bottom of the coronal view.
 - **Channel brightness** — This is essential to get the correct colors for each neuron, e.g. CEPD is pink, AVA is a bright blue color, etc. one slider and box per channel, as a percentage of a division
   factor (100% = untouched, 50% = divided by 2, 200% = multiplied by 2). The checkboxes
   turn a channel, or the whole NeuroPAL image, off in the display.
@@ -67,7 +67,7 @@ over y.
   each with an opacity box; `a` and `s` toggle them.
 - **Curve-Based Contrast Adjustment** — an ITK-SNAP-style transfer curve over the intensity
   histogram. Drag the control points; display only, never written to file.
-- **Output** — **Save corrected NRRDs + info** writes, next to the source by default:
+- **Output (Optional since the labeling tab can adjust brightnesses and reorientation as well)** — **Save corrected NRRDs + info** writes, next to the source by default:
   `NeuroPAL_corrected.nrrd` (reoriented and rescaled), `all_red_corrected.nrrd` and
   `neuron_rois_corrected.nrrd` (reoriented only), and `neuropal_info.txt` recording the
   saved orientation and the factors used.
