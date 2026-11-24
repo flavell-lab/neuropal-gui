@@ -212,6 +212,19 @@ def labels_path_for(src_path, out_dir=None):
                         f"{os.path.basename(folder)}_labels.csv")
 
 
+def date_id_for(src_path):
+    """Date ID from the dataset folder, e.g. 2026-06-03-01 from .../2026-06-03-01_output/.
+
+    Steps out of CORRECTED_DIR_NAME first, like labels_path_for. Returns "" when the folder
+    isn't named <date ID>_output, so callers can just leave the ID out.
+    """
+    folder = os.path.dirname(os.path.abspath(src_path))
+    if os.path.basename(folder) == CORRECTED_DIR_NAME:
+        folder = os.path.dirname(folder)
+    name = os.path.basename(folder)
+    return name[:-len("_output")] if name.endswith("_output") and len(name) > 7 else ""
+
+
 def read_labels(path):
     """Load the label table into {roi id: row}. A missing file is simply an empty table."""
     rows = {}
@@ -872,7 +885,38 @@ def use_compact_style(root):
     style.configure(".", font=PANEL_FONT)
     style.configure("TLabelframe.Label", font=PANEL_FONT)
     style.configure("Slice.TButton", padding=0)
+    # The right column runs one size smaller, so it fits on a laptop screen too.
+    small = ("TkDefaultFont", max(base - 2, 1))
+    for cls in RIGHT_STYLED_CLASSES:
+        style.configure(f"Right.{cls}", font=small)
+    style.configure("Right.TLabelframe.Label", font=small)
     return style
+
+
+# ttk classes whose font comes from their style rather than a -font option.
+RIGHT_STYLED_CLASSES = ("TButton", "TCheckbutton", "TRadiobutton", "TLabelframe")
+
+
+def shrink_fonts(widget):
+    """Make every widget under `widget` one font size smaller.
+
+    Widgets with a -font option (labels, entries) get it lowered directly; buttons and
+    frames take their font from a ttk style, so they are switched to the Right.* variant
+    that use_compact_style sets up.
+    """
+    for child in widget.winfo_children():
+        keys = child.keys()
+        if "font" in keys:
+            current = child.cget("font") or "TkDefaultFont"
+            family = child.tk.call("font", "actual", current, "-family")
+            size = int(child.tk.call("font", "actual", current, "-size"))
+            step = -1 if size > 0 else 1        # negative sizes are pixels
+            child.configure(font=(family, size + step))
+        elif "style" in keys and not child.cget("style"):
+            cls = child.winfo_class()
+            if cls in RIGHT_STYLED_CLASSES:
+                child.configure(style=f"Right.{cls}")
+        shrink_fonts(child)
 
 
 class VolumeTab:
@@ -929,10 +973,12 @@ class VolumeTab:
         self.conf_threshold = tk.DoubleVar(value=CONFIDENCE_THRESHOLD_DEFAULT)
         self.conf_threshold_label = tk.StringVar(
             value=str(CONFIDENCE_THRESHOLD_DEFAULT))
-        # Checked hides the left column. Two checkbuttons share this variable: one at the
-        # top of the column, and a stand-in at the top-left of the images that only appears
-        # once the column is gone, so the switch is never hidden along with it.
+        # Checked hides the left (or right) column. Two checkbuttons share each variable:
+        # one at the top of the column, and a stand-in above the images (top-left or
+        # top-right) that only appears once the column is gone, so the switch is never
+        # hidden along with it.
         self.hide_left = tk.BooleanVar(value=False)
+        self.hide_right = tk.BooleanVar(value=False)
 
         self.build()
 
@@ -956,8 +1002,12 @@ class VolumeTab:
         self.right = ttk.Frame(body, width=RIGHT_PANEL_WIDTH, padding=(4, 4, 6, 4))
         self.right.pack(side=tk.RIGHT, fill=tk.Y)
         self.right.pack_propagate(False)
+        ttk.Checkbutton(self.right, text="Hide right panel display",
+                        variable=self.hide_right,
+                        command=self.toggle_right_panel).pack(anchor=tk.W, pady=(0, 2))
         self.build_contrast(self.right)
         self.build_right_extras(self.right)
+        shrink_fonts(self.right)
 
         self.build_views(body)
 
@@ -965,10 +1015,29 @@ class VolumeTab:
         """Collapse the left column, or bring it back into its original slot."""
         if self.hide_left.get():
             self.left.pack_forget()
-            self.hide_bar.pack(side=tk.TOP, fill=tk.X, before=self.viewport)
+            self.hide_left_check.pack(side=tk.LEFT, padx=2)
+        else:
+            self.hide_left_check.pack_forget()
+            self.left.pack(side=tk.LEFT, fill=tk.Y, before=self.plot)
+        self.update_hide_bar()
+
+    def toggle_right_panel(self):
+        """Collapse the right column, or bring it back into its original slot."""
+        if self.hide_right.get():
+            self.right.pack_forget()
+            self.hide_right_check.pack(side=tk.RIGHT, padx=2)
+        else:
+            self.hide_right_check.pack_forget()
+            self.right.pack(side=tk.RIGHT, fill=tk.Y, before=self.plot)
+        self.update_hide_bar()
+
+    def update_hide_bar(self):
+        """Show the stand-in bar above the images only while some column is hidden."""
+        if self.hide_left.get() or self.hide_right.get():
+            if not self.hide_bar.winfo_manager():
+                self.hide_bar.pack(side=tk.TOP, fill=tk.X, before=self.viewport)
         else:
             self.hide_bar.pack_forget()
-            self.left.pack(side=tk.LEFT, fill=tk.Y, before=self.plot)
 
     def build_header(self, parent):
         """Anything above the panels. Only the Processing tab uses this."""
@@ -1014,8 +1083,7 @@ class VolumeTab:
                   justify=tk.LEFT, foreground="#555", font=HINT_FONT,
                   wraplength=LEFT_PANEL_WIDTH - 40).pack(anchor=tk.W, padx=3, pady=(2, 1))
         ttk.Label(box, text="Orient the lateral view with the ventral nerve cord at the "
-                            "bottom; left-side neurons then appear at the bottom of the "
-                            "coronal view (smaller z).",
+                            "bottom for consistency.",
                   justify=tk.LEFT, foreground="#555", font=HINT_FONT,
                   wraplength=LEFT_PANEL_WIDTH - 40).pack(anchor=tk.W, padx=3, pady=(4, 1))
 
@@ -1198,12 +1266,16 @@ class VolumeTab:
         viewport = ttk.Frame(plot)
         self.viewport = viewport        # packed below, after the toolbar has its height
 
-        # The stand-in switch, parked at the top left of the images. It stays unpacked
-        # while the column is open, so it costs no height until it is actually needed.
+        # The stand-in switches, parked at the top left / top right of the images. The bar
+        # and each switch stay unpacked while their column is open, so they cost no height
+        # until actually needed.
         self.hide_bar = ttk.Frame(plot)
-        ttk.Checkbutton(self.hide_bar, text="Hide left panel display",
-                        variable=self.hide_left,
-                        command=self.toggle_left_panel).pack(side=tk.LEFT, padx=2)
+        self.hide_left_check = ttk.Checkbutton(
+            self.hide_bar, text="Hide left panel display",
+            variable=self.hide_left, command=self.toggle_left_panel)
+        self.hide_right_check = ttk.Checkbutton(
+            self.hide_bar, text="Hide right panel display",
+            variable=self.hide_right, command=self.toggle_right_panel)
 
         # Lateral on top, coronal directly below and sharing its x axis, so the same
         # head-to-tail position lines up vertically between the two. The layout padding is
@@ -1508,6 +1580,18 @@ class VolumeTab:
         return (f"{name}  ({AXIS_LETTER[axis]} {self.cursor[axis] + 1} "
                 f"of {self.app.data.shape[axis]})")
 
+    def label_view_axes(self, ax, axis):
+        """Voxel axes on a panel: x along the bottom, the view's own axis up the side.
+
+        The numbers are displayed voxel indices, the same ones the cursor readout gives.
+        Both panels carry their own x numbers even though they share the axis, and the
+        vertical ones follow `VIEW_ORIGIN`, so y counts downward and z upward.
+        """
+        ax.axis("on")
+        ax.set_xlabel(AXIS_LETTER[0], fontsize=8, labelpad=1)
+        ax.set_ylabel(AXIS_LETTER[3 - axis], fontsize=8, labelpad=1)
+        ax.tick_params(labelsize=7, length=2.5, pad=1.5, labelbottom=True)
+
     def render_frames(self, pcts, vis, points):
         if self.slice_mode:
             return [composite_slice(self.app.data, pcts, vis, self.app.ref, points=points,
@@ -1622,7 +1706,7 @@ class VolumeTab:
                 kwargs = dict(spec)
                 ax.imshow(kwargs.pop("X"), origin=VIEW_ORIGIN[axis],
                           interpolation="nearest", **kwargs)
-            ax.axis("off")
+            self.label_view_axes(ax, axis)
             ax.set_title(self.view_title(axis, name), fontsize=9)
 
             # x is shared by both panels; the horizontal line is each panel's own in-plane
@@ -1635,7 +1719,8 @@ class VolumeTab:
 
         axis0, name0 = VIEWS[0]
         self.axes[0].set_title(
-            f"{os.path.basename(self.app.src_path)}  |  {self.header_line(pcts, shown)}"
+            f"{date_id_for(self.app.src_path)} {os.path.basename(self.app.src_path)}".strip()
+            + f"  |  {self.header_line(pcts, shown)}"
             f"\n{self.view_title(axis0, name0)}", fontsize=9)
 
         for scroller, (axis, _) in zip(self.scrollers, VIEWS):
@@ -1709,8 +1794,6 @@ class ProcessingTab(VolumeTab):
         labels = ttk.LabelFrame(parent, text="Labeled Neurons (Optional)", padding=BOX_PAD)
         labels.pack(side=tk.TOP, fill=tk.X, pady=(BOX_GAP * 2, 0))
         self.build_label_display(labels)
-        ttk.Label(labels, text="names are projected in z, like the image",
-                  foreground="#555", font=HINT_FONT).pack(anchor=tk.W)
         self.build_labels_path_row(labels)
 
     def after_draw(self, pcts):
